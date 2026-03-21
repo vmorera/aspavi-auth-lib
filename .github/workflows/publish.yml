@@ -32,6 +32,9 @@ jobs:
 
       - name: Build & run tests
         run: mvn --batch-mode verify
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
         # Only publish on pushes to main/master or on version tags (not on PRs)

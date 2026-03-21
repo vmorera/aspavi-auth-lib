@@ -33,18 +33,24 @@ public class TenantConnectionProvider implements MultiTenantConnectionProvider<S
     @Override
     public Connection getConnection(String tenantIdentifier) throws SQLException {
         Connection connection = getAnyConnection();
-        // Set the PostgreSQL search_path to isolate data per tenant schema
+        // Set the PostgreSQL session variable used by Row Level Security policies.
+        // The RLS policy on the employees table uses:
+        //   USING (current_setting('app.current_tenant', true) = tenant_id)
+        String safeTenant = tenantIdentifier.replace("'", "''");
         connection.createStatement().execute(
-                "SET search_path TO " + tenantIdentifier + ", public"
+                "SET app.current_tenant = '" + safeTenant + "'"
         );
         return connection;
     }
 
     @Override
     public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {
-        // Reset search_path to public before returning connection to pool
-        connection.createStatement().execute("SET search_path TO public");
-        connection.close();
+        // Reset before returning to pool so no tenant bleeds into the next request
+        try {
+            connection.createStatement().execute("RESET app.current_tenant");
+        } finally {
+            connection.close();
+        }
     }
 
     @Override

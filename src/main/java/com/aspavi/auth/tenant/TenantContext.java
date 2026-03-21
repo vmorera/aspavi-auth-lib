@@ -19,6 +19,18 @@ public final class TenantContext {
         return CURRENT_TENANT.get();
     }
 
+    /**
+     * Returns the tenant ID or throws if not set.
+     * Use in service layer code that requires a tenant to be present.
+     */
+    public static String getRequiredTenantId() {
+        String tenantId = CURRENT_TENANT.get();
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalStateException("Tenant ID not set in current context");
+        }
+        return tenantId;
+    }
+
     public static void clear() {
         CURRENT_TENANT.remove();
     }
