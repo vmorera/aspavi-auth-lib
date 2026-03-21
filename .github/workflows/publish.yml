@@ -30,15 +30,13 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
-      - name: Build & run tests
-        run: mvn --batch-mode verify
+      - name: Build, test & publish
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            mvn --batch-mode deploy
+          else
+            mvn --batch-mode verify
+          fi
         env:
           GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to GitHub Packages
-        # Only publish on pushes to main/master or on version tags (not on PRs)
-        if: github.event_name == 'push'
-        run: mvn --batch-mode deploy -DskipTests
-        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
