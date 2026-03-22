@@ -11,14 +11,22 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
-@AutoConfiguration
+/**
+ * Auto-configuration for Aspavi multi-tenant JWT authentication and
+ * PostgreSQL Row-Level Security support.
+ *
+ * <p>{@code @AutoConfiguration(after = HibernateJpaAutoConfiguration.class)} ensures
+ * this runs after Spring Boot's JPA auto-config has registered the
+ * {@code EntityManagerFactory}. We then replace the default
+ * {@code JpaTransactionManager} with our tenant-aware subclass.
+ */
+@AutoConfiguration(afterName = "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration")
 @EnableConfigurationProperties(AuthProperties.class)
 public class AspavIAuthAutoConfiguration {
 
@@ -60,15 +68,17 @@ public class AspavIAuthAutoConfiguration {
     // -------------------------------------------------------------------------
     // Tenant-aware transaction manager
     //
-    // Replaces the default JpaTransactionManager. On doBegin() it executes
-    // SET LOCAL app.current_tenant on the transaction connection so that
-    // PostgreSQL RLS policies can enforce tenant isolation for every statement
-    // in the transaction — with zero ordering issues.
+    // Replaces the default JpaTransactionManager with our subclass that calls
+    // SET LOCAL app.current_tenant inside doBegin(), guaranteeing the variable
+    // is set on the transaction connection before any Hibernate SQL executes.
+    //
+    // @Primary ensures this bean wins over the default one registered by
+    // HibernateJpaAutoConfiguration. No @ConditionalOnMissingBean here —
+    // we always want our implementation to be active.
     // -------------------------------------------------------------------------
 
     @Bean
     @Primary
-    @ConditionalOnMissingBean(PlatformTransactionManager.class)
     @ConditionalOnBean({DataSource.class, EntityManagerFactory.class})
     public TenantAwareJpaTransactionManager transactionManager(
             EntityManagerFactory entityManagerFactory,
