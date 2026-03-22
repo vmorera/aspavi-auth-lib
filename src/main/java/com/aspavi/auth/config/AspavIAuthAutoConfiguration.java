@@ -1,15 +1,17 @@
 package com.aspavi.auth.config;
 
-import com.aspavi.auth.tenant.TenantTransactionAspect;
+import com.aspavi.auth.tenant.TenantAwareJpaTransactionManager;
+import jakarta.persistence.EntityManagerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 import java.util.Collection;
@@ -56,18 +58,24 @@ public class AspavIAuthAutoConfiguration {
     }
 
     // -------------------------------------------------------------------------
-    // Tenant AOP — sets PostgreSQL app.current_tenant before every transaction
+    // Tenant-aware transaction manager
     //
-    // Only registered when AspectJ is on the classpath (spring-boot-starter-aop)
-    // and a DataSource is available. ConditionalOnClass guards against libraries
-    // that include aspavi-auth-lib but don't use Spring Data JPA.
+    // Replaces the default JpaTransactionManager. On doBegin() it executes
+    // SET LOCAL app.current_tenant on the transaction connection so that
+    // PostgreSQL RLS policies can enforce tenant isolation for every statement
+    // in the transaction — with zero ordering issues.
     // -------------------------------------------------------------------------
 
     @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnBean(DataSource.class)
-    @ConditionalOnClass(name = "org.aspectj.lang.annotation.Aspect")
-    public TenantTransactionAspect tenantTransactionAspect(DataSource dataSource) {
-        return new TenantTransactionAspect(dataSource);
+    @Primary
+    @ConditionalOnMissingBean(PlatformTransactionManager.class)
+    @ConditionalOnBean({DataSource.class, EntityManagerFactory.class})
+    public TenantAwareJpaTransactionManager transactionManager(
+            EntityManagerFactory entityManagerFactory,
+            DataSource dataSource) {
+        TenantAwareJpaTransactionManager tm = new TenantAwareJpaTransactionManager();
+        tm.setEntityManagerFactory(entityManagerFactory);
+        tm.setDataSource(dataSource);
+        return tm;
     }
 }
