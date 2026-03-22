@@ -2,8 +2,10 @@ package com.aspavi.auth.config;
 
 import com.aspavi.auth.tenant.TenantConnectionProvider;
 import com.aspavi.auth.tenant.TenantIdentifierResolver;
+import org.hibernate.cfg.AvailableSettings;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -18,9 +20,10 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
  *   <li>{@link MultiTenantJwtDecoder} — decodes JWTs from multiple Keycloak realms</li>
  *   <li>{@link JwtAuthenticationConverter} — maps Keycloak realm roles to Spring Security
  *       {@code ROLE_} authorities</li>
- *   <li>{@link TenantConnectionProvider} — routes Hibernate connections to per-tenant schemas</li>
- *   <li>{@link TenantIdentifierResolver} — resolves the current Hibernate schema from
- *       {@link com.aspavi.auth.tenant.TenantContext}</li>
+ *   <li>{@link TenantConnectionProvider} — sets app.current_tenant on each Hibernate connection</li>
+ *   <li>{@link TenantIdentifierResolver} — resolves the current tenant from TenantContext</li>
+ *   <li>{@link HibernatePropertiesCustomizer} — wires the two tenant beans into Hibernate
+ *       so it never tries to instantiate them via reflection</li>
  * </ul>
  *
  * <p>Every bean is annotated with {@link ConditionalOnMissingBean} so consuming services
@@ -44,10 +47,6 @@ public class AspavIAuthAutoConfiguration {
     // Keycloak role mapping
     // -------------------------------------------------------------------------
 
-    /**
-     * Converts Keycloak realm roles (found under {@code realm_access.roles}) into
-     * Spring Security {@code ROLE_<UPPERCASE_ROLE>} granted authorities.
-     */
     @Bean
     @ConditionalOnMissingBean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
@@ -61,7 +60,7 @@ public class AspavIAuthAutoConfiguration {
     }
 
     // -------------------------------------------------------------------------
-    // Multi-tenancy (Hibernate schema-per-tenant)
+    // Multi-tenancy beans
     // -------------------------------------------------------------------------
 
     @Bean
@@ -70,7 +69,23 @@ public class AspavIAuthAutoConfiguration {
         return new TenantIdentifierResolver();
     }
 
-    // NOTE: TenantConnectionProvider requires a DataSource, so it is declared
-    // as a @Component inside the class itself to let Spring handle injection.
-    // Consuming services that do not use JPA will simply never instantiate it.
+    // -------------------------------------------------------------------------
+    // Hibernate wiring — passes the Spring-managed beans directly to Hibernate
+    // so it never tries to instantiate them via reflection (which would fail
+    // because TenantConnectionProvider requires a DataSource constructor arg).
+    // -------------------------------------------------------------------------
+
+    @Bean
+    @ConditionalOnMissingBean(name = "aspavIHibernateMultiTenancyCustomizer")
+    public HibernatePropertiesCustomizer aspavIHibernateMultiTenancyCustomizer(
+            TenantConnectionProvider tenantConnectionProvider,
+            TenantIdentifierResolver tenantIdentifierResolver) {
+
+        return hibernateProperties -> {
+            hibernateProperties.put(
+                    AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, tenantConnectionProvider);
+            hibernateProperties.put(
+                    AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, tenantIdentifierResolver);
+        };
+    }
 }
