@@ -13,7 +13,7 @@
     <name>Aspavi Auth Library</name>
     <description>
         Spring Boot auto-configuration for multi-tenant JWT authentication with Keycloak
-        and Hibernate schema-per-tenant row-level security.
+        and PostgreSQL Row-Level Security via AOP transaction interception.
     </description>
 
     <properties>
@@ -57,17 +57,24 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- JPA / Hibernate multi-tenancy API -->
+        <!-- Spring JDBC — used by TenantTransactionAspect for SET LOCAL -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- HibernatePropertiesCustomizer — moved to this module in Spring Boot 4.x -->
+        <!-- AOP — required by TenantTransactionAspect -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-hibernate</artifactId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- JPA / Hibernate (optional — consuming service provides it) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
             <optional>true</optional>
         </dependency>
 
