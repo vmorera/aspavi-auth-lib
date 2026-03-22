@@ -1,45 +1,28 @@
 package com.aspavi.auth.tenant;
 
-import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Map;
 
 /**
  * Provides JDBC connections scoped to the current tenant by setting the PostgreSQL
  * session variable app.current_tenant on each connection checkout.
  *
- * <p>Implements {@link HibernatePropertiesCustomizer} so that Hibernate receives
- * the already-constructed Spring bean (with its DataSource) rather than trying to
- * instantiate it via reflection — which would fail because there is no no-arg constructor.
+ * <p>Registered into Hibernate via {@link com.aspavi.auth.config.AspavIAuthAutoConfiguration}
+ * using a HibernatePropertiesCustomizer bean — this avoids Hibernate trying to instantiate
+ * this class via reflection (which would fail due to the required DataSource constructor arg).
  */
 @Component
-public class TenantConnectionProvider
-        implements MultiTenantConnectionProvider<String>, HibernatePropertiesCustomizer {
+public class TenantConnectionProvider implements MultiTenantConnectionProvider<String> {
 
     private final DataSource dataSource;
 
     public TenantConnectionProvider(DataSource dataSource) {
         this.dataSource = dataSource;
     }
-
-    // -----------------------------------------------------------------------
-    // HibernatePropertiesCustomizer — wires this bean into Hibernate
-    // -----------------------------------------------------------------------
-
-    @Override
-    public void customize(Map<String, Object> hibernateProperties) {
-        hibernateProperties.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER, this);
-    }
-
-    // -----------------------------------------------------------------------
-    // MultiTenantConnectionProvider
-    // -----------------------------------------------------------------------
 
     @Override
     public Connection getAnyConnection() throws SQLException {
