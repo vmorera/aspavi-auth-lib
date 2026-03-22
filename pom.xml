@@ -64,6 +64,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- HibernatePropertiesCustomizer — moved to this module in Spring Boot 4.x -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-hibernate</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Servlet API (provided by the application container) -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
