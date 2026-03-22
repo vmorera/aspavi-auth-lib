@@ -1,15 +1,13 @@
 package com.aspavi.auth.tenant;
 
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-import org.springframework.stereotype.Component;
 
 /**
  * Resolves the current Hibernate tenant identifier from {@link TenantContext}.
  *
- * <p>Registered into Hibernate via {@link com.aspavi.auth.config.AspavIAuthAutoConfiguration}
- * using a HibernatePropertiesCustomizer bean.
+ * <p>Registered as a Spring bean via {@link com.aspavi.auth.config.AspavIAuthAutoConfiguration},
+ * which also wires it into Hibernate via HibernatePropertiesCustomizer.
  */
-@Component
 public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver<String> {
 
     private static final String DEFAULT_TENANT = "public";

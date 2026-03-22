@@ -1,7 +1,6 @@
 package com.aspavi.auth.tenant;
 
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
-import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -11,11 +10,9 @@ import java.sql.SQLException;
  * Provides JDBC connections scoped to the current tenant by setting the PostgreSQL
  * session variable app.current_tenant on each connection checkout.
  *
- * <p>Registered into Hibernate via {@link com.aspavi.auth.config.AspavIAuthAutoConfiguration}
- * using a HibernatePropertiesCustomizer bean — this avoids Hibernate trying to instantiate
- * this class via reflection (which would fail due to the required DataSource constructor arg).
+ * <p>Registered as a Spring bean via {@link com.aspavi.auth.config.AspavIAuthAutoConfiguration},
+ * which also wires it into Hibernate via HibernatePropertiesCustomizer.
  */
-@Component
 public class TenantConnectionProvider implements MultiTenantConnectionProvider<String> {
 
     private final DataSource dataSource;
